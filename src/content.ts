@@ -1,41 +1,11 @@
 const INDICATOR_CLASS = "nti-new-tab-indicator";
 const ICON_CLASS = "nti-new-tab-icon";
 const MARKED_ATTR = "data-nti-marked";
-const OPEN_EVENT_NAME = "nti-window-open-detected";
 
 let lastInteraction: { target: Element | null; at: number } = {
   target: null,
   at: 0,
 };
-
-function injectWindowOpenHook(): void {
-  const script = document.createElement("script");
-  script.textContent = `(() => {
-    if ((window).__ntiOpenHookInstalled) {
-      return;
-    }
-
-    (window).__ntiOpenHookInstalled = true;
-    const originalOpen = window.open;
-
-    window.open = function (...args) {
-      try {
-        document.dispatchEvent(new CustomEvent("${OPEN_EVENT_NAME}", {
-          detail: {
-            ts: Date.now()
-          }
-        }));
-      } catch (_) {
-        // no-op
-      }
-
-      return originalOpen.apply(this, args);
-    };
-  })();`;
-
-  (document.documentElement || document.head || document.body).appendChild(script);
-  script.remove();
-}
 
 function isHTMLElement(node: unknown): node is HTMLElement {
   return node instanceof HTMLElement;
@@ -136,29 +106,40 @@ function setupInteractionTracking(): void {
   document.addEventListener("click", track, true);
 }
 
-function setupWindowOpenListener(): void {
-  document.addEventListener(OPEN_EVENT_NAME, () => {
+function setupWindowOpenHook(): void {
+  const ntiWindow = window as Window & {
+    __ntiOpenHookInstalled?: boolean;
+    __ntiOriginalOpen?: Window["open"];
+  };
+
+  if (ntiWindow.__ntiOpenHookInstalled) {
+    return;
+  }
+
+  ntiWindow.__ntiOpenHookInstalled = true;
+  ntiWindow.__ntiOriginalOpen = window.open;
+
+  window.open = function (...args) {
     const now = Date.now();
     const withinRecentClickWindow = now - lastInteraction.at <= 1500;
 
-    if (!withinRecentClickWindow) {
-      return;
+    if (withinRecentClickWindow) {
+      const candidate = nearestMarkableElement(lastInteraction.target);
+      if (candidate) {
+        appendIndicator(candidate);
+      }
     }
 
-    const candidate = nearestMarkableElement(lastInteraction.target);
-    if (candidate) {
-      appendIndicator(candidate);
-    }
-  });
+    return ntiWindow.__ntiOriginalOpen?.apply(window, args) ?? null;
+  };
 }
 
 function bootstrap(): void {
   markBlankTargetLinks(document);
   markInlineWindowOpen(document);
   setupInteractionTracking();
-  setupWindowOpenListener();
+  setupWindowOpenHook();
   observeDomChanges();
-  injectWindowOpenHook();
 }
 
 if (document.readyState === "loading") {
