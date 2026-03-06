@@ -3,9 +3,9 @@
 }
 
 .nti-new-tab-icon {
-  --nti-bg: rgb(59 130 246 / 0.12);
-  --nti-border: rgb(59 130 246 / 0.34);
-  --nti-fg: #3b82f6;
+  --nti-bg: rgb(59 130 246 / 0.08);
+  --nti-border: rgb(59 130 246 / 0.24);
+  --nti-fg: rgb(59 130 246 / 0.82);
   display: inline-block;
   margin-left: 0.22em;
   padding: 0.05em 0.18em 0.09em;
@@ -25,9 +25,9 @@
 
 @media (prefers-color-scheme: dark) {
   .nti-new-tab-icon {
-    --nti-bg: rgb(59 130 246 / 0.2);
-    --nti-border: rgb(59 130 246 / 0.46);
-    --nti-fg: #3b82f6;
-    opacity: 0.92;
+    --nti-bg: rgb(59 130 246 / 0.14);
+    --nti-border: rgb(59 130 246 / 0.34);
+    --nti-fg: rgb(96 165 250 / 0.88);
+    opacity: 0.9;
   }
 }
