@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "New Tab Link Indicator",
+  "version": "1.0.0",
+  "description": "Shows which links open in a new tab (target=_blank or window.open).",
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "css": ["styles.css"],
+      "run_at": "document_idle"
+    }
+  ]
+}

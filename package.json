@@ -1,0 +1,14 @@
+{
+  "name": "link-new-tab-indicator",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "rm -rf dist && mkdir -p dist && bunx esbuild src/content.ts --bundle --format=iife --target=chrome120 --outfile=dist/content.js && cp src/styles.css dist/styles.css && cp manifest.json dist/manifest.json",
+    "watch": "mkdir -p dist && bunx esbuild src/content.ts --bundle --format=iife --target=chrome120 --outfile=dist/content.js --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0",
+    "typescript": "^5.8.2"
+  }
+}

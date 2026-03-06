@@ -1,0 +1,33 @@
+.nti-new-tab-indicator {
+  position: relative;
+}
+
+.nti-new-tab-icon {
+  --nti-bg: rgb(59 130 246 / 0.12);
+  --nti-border: rgb(59 130 246 / 0.34);
+  --nti-fg: #3b82f6;
+  display: inline-block;
+  margin-left: 0.22em;
+  padding: 0.05em 0.18em 0.09em;
+  vertical-align: text-top;
+  transform: translateY(-0.03em);
+  border: 1px solid var(--nti-border);
+  border-radius: 0.28em;
+  background: var(--nti-bg);
+  color: var(--nti-fg);
+  font-size: 0.72em;
+  font-weight: 650;
+  line-height: 1;
+  opacity: 0.9;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  .nti-new-tab-icon {
+    --nti-bg: rgb(59 130 246 / 0.2);
+    --nti-border: rgb(59 130 246 / 0.46);
+    --nti-fg: #3b82f6;
+    opacity: 0.92;
+  }
+}
