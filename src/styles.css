@@ -3,9 +3,12 @@
 }
 
 .nti-new-tab-icon {
-  --nti-bg: rgb(59 130 246 / 0.08);
-  --nti-border: rgb(59 130 246 / 0.24);
-  --nti-fg: rgb(59 130 246 / 0.82);
+  --nti-bg: rgb(100 116 139 / 0.08);
+  --nti-border: rgb(100 116 139 / 0.28);
+  --nti-fg: rgb(71 85 105 / 0.88);
+  --nti-bg-hover: rgb(139 92 246 / 0.14);
+  --nti-border-hover: rgb(139 92 246 / 0.38);
+  --nti-fg-hover: rgb(124 58 237 / 0.92);
   display: inline-block;
   margin-left: 0.22em;
   padding: 0.05em 0.18em 0.09em;
@@ -21,13 +24,23 @@
   opacity: 0.9;
   box-sizing: border-box;
   pointer-events: none;
+  transition: color 120ms ease, border-color 120ms ease, background-color 120ms ease;
+}
+
+.nti-new-tab-indicator:is(:hover, :focus-visible) .nti-new-tab-icon {
+  background: var(--nti-bg-hover);
+  border-color: var(--nti-border-hover);
+  color: var(--nti-fg-hover);
 }
 
 @media (prefers-color-scheme: dark) {
   .nti-new-tab-icon {
-    --nti-bg: rgb(59 130 246 / 0.14);
-    --nti-border: rgb(59 130 246 / 0.34);
-    --nti-fg: rgb(96 165 250 / 0.88);
-    opacity: 0.9;
+    --nti-bg: rgb(148 163 184 / 0.14);
+    --nti-border: rgb(148 163 184 / 0.34);
+    --nti-fg: rgb(203 213 225 / 0.92);
+    --nti-bg-hover: rgb(139 92 246 / 0.24);
+    --nti-border-hover: rgb(167 139 250 / 0.5);
+    --nti-fg-hover: rgb(221 214 254 / 0.98);
+    opacity: 0.92;
   }
 }
