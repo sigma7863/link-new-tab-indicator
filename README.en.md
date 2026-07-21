@@ -20,10 +20,9 @@ bun run build
 
 After building, the following files will be generated in the dist directory:
 
-dist/
-├── manifest.json
-├── content.js
-└── styles.css
+- `dist/manifest.json`
+- `dist/content.js`
+- `dist/styles.css`
 
 ## Load into Chrome
 
