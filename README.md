@@ -20,9 +20,10 @@ bun run build
 
 ビルド後、`dist` フォルダに以下が生成されます。
 
-- `dist/manifest.json`
-- `dist/content.js`
-- `dist/styles.css`
+dist/
+├── manifest.json
+├── content.js
+└── styles.css
 
 ## Chrome への読み込み
 
