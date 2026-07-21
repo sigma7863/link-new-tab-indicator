@@ -1,5 +1,7 @@
 # New Tab Link Indicator
 
+日本語 | [English](README.en.md)
+
 `target="_blank"` または `window.open()` で新しいタブを開く要素を、`↗` アイコンで可視化する Chrome 拡張です。
 
 ## Tech Stack
