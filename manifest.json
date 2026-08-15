@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "New Tab Link Indicator",
   "version": "1.0.0",
-  "description": "Shows which links open in a new tab (target=_blank or window.open).",
+  "description": "Shows new-tab links and direct image links on web pages.",
   "content_scripts": [
     {
       "matches": ["<all_urls>"],

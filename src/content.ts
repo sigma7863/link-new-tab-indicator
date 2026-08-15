@@ -1,6 +1,15 @@
-const INDICATOR_CLASS = "nti-new-tab-indicator";
-const ICON_CLASS = "nti-new-tab-icon";
-const MARKED_ATTR = "data-nti-marked";
+const INDICATOR_CLASS = "nti-link-indicator";
+const NEW_TAB_INDICATOR_CLASS = "nti-new-tab-indicator";
+const IMAGE_LINK_INDICATOR_CLASS = "nti-image-link-indicator";
+const ICON_CLASS = "nti-link-icon";
+const NEW_TAB_ICON_CLASS = "nti-new-tab-icon";
+const IMAGE_LINK_ICON_CLASS = "nti-image-link-icon";
+const NEW_TAB_MARKED_ATTR = "data-nti-new-tab-marked";
+const IMAGE_LINK_MARKED_ATTR = "data-nti-image-link-marked";
+const TITLE_OWNED_ATTR = "data-nti-title-owned";
+const RECENT_INTERACTION_SUPPRESSION_MS = 1200;
+const IMAGE_FILE_EXTENSION_RE =
+  /\.(?:apng|avif|bmp|gif|heic|heif|ico|jpe?g|png|svg|tiff?|webp)$/i;
 
 let lastInteraction: { target: Element | null; at: number } = {
   target: null,
@@ -11,38 +20,121 @@ function isHTMLElement(node: unknown): node is HTMLElement {
   return node instanceof HTMLElement;
 }
 
-function appendIndicator(el: Element): void {
+function appendBadge(
+  el: Element,
+  options: {
+    className: string;
+    markedAttr: string;
+    text: string;
+    title: string;
+  }
+): void {
   if (!isHTMLElement(el)) {
     return;
   }
 
-  if (el.getAttribute(MARKED_ATTR) === "1") {
+  if (el.getAttribute(options.markedAttr) === "1") {
     return;
   }
 
-  el.setAttribute(MARKED_ATTR, "1");
+  el.setAttribute(options.markedAttr, "1");
   el.classList.add(INDICATOR_CLASS);
+  el.classList.add(options.className);
 
-  if (!el.getAttribute("title")) {
-    el.setAttribute("title", "新しいタブで開く");
+  if (!el.getAttribute("title") || el.getAttribute(TITLE_OWNED_ATTR) === "1") {
+    const title = el.getAttribute("title");
+    el.setAttribute("title", title ? `${title} / ${options.title}` : options.title);
+    el.setAttribute(TITLE_OWNED_ATTR, "1");
   }
 
   const icon = document.createElement("span");
-  icon.className = ICON_CLASS;
+  icon.className = `${ICON_CLASS} ${
+    options.markedAttr === NEW_TAB_MARKED_ATTR ? NEW_TAB_ICON_CLASS : IMAGE_LINK_ICON_CLASS
+  }`;
   icon.setAttribute("aria-hidden", "true");
-  icon.textContent = "↗";
+  icon.textContent = options.text;
 
   el.appendChild(icon);
 }
 
+function appendNewTabIndicator(el: Element): void {
+  appendBadge(el, {
+    className: NEW_TAB_INDICATOR_CLASS,
+    markedAttr: NEW_TAB_MARKED_ATTR,
+    text: "↗",
+    title: "新しいタブで開く",
+  });
+}
+
+function appendImageLinkIndicator(el: Element): void {
+  appendBadge(el, {
+    className: IMAGE_LINK_INDICATOR_CLASS,
+    markedAttr: IMAGE_LINK_MARKED_ATTR,
+    text: "img",
+    title: "画像ファイルへのリンク",
+  });
+}
+
+function hasBlankTarget(link: HTMLAnchorElement): boolean {
+  return link.target.toLowerCase() === "_blank";
+}
+
+function hasInlineWindowOpen(node: HTMLElement): boolean {
+  return node.getAttribute("onclick")?.toLowerCase().includes("window.open") ?? false;
+}
+
+function hasImageMimeType(link: HTMLAnchorElement): boolean {
+  return link.getAttribute("type")?.trim().toLowerCase().startsWith("image/") ?? false;
+}
+
+function hasImageHref(link: HTMLAnchorElement): boolean {
+  const href = link.getAttribute("href")?.trim();
+
+  if (!href) {
+    return false;
+  }
+
+  if (/^data:image\//i.test(href)) {
+    return true;
+  }
+
+  try {
+    const url = new URL(href, window.location.href);
+    return IMAGE_FILE_EXTENSION_RE.test(decodeURIComponent(url.pathname));
+  } catch {
+    return IMAGE_FILE_EXTENSION_RE.test(href.split(/[?#]/, 1)[0]);
+  }
+}
+
+function isImageLink(link: HTMLAnchorElement): boolean {
+  return hasImageMimeType(link) || hasImageHref(link);
+}
+
 function markBlankTargetLinks(root: ParentNode): void {
-  const links = root.querySelectorAll("a[href][target='_blank']");
-  links.forEach((link) => appendIndicator(link));
+  const links = root.querySelectorAll<HTMLAnchorElement>("a[href][target]");
+  links.forEach((link) => {
+    if (hasBlankTarget(link)) {
+      appendNewTabIndicator(link);
+    }
+  });
 }
 
 function markInlineWindowOpen(root: ParentNode): void {
-  const clickableNodes = root.querySelectorAll<HTMLElement>("[onclick*='window.open']");
-  clickableNodes.forEach((node) => appendIndicator(node));
+  const clickableNodes = root.querySelectorAll<HTMLElement>("[onclick]");
+  clickableNodes.forEach((node) => {
+    if (hasInlineWindowOpen(node)) {
+      appendNewTabIndicator(node);
+    }
+  });
+}
+
+function markImageLinks(root: ParentNode): void {
+  const links = root.querySelectorAll<HTMLAnchorElement>("a[href], a[type]");
+  links.forEach((link) => {
+    if (isImageLink(link)) {
+      appendImageLinkIndicator(link);
+    }
+  });
 }
 
 function nearestMarkableElement(start: Element | null): Element | null {
@@ -53,21 +145,42 @@ function nearestMarkableElement(start: Element | null): Element | null {
   return start.closest("a, button, [role='button'], [onclick]") ?? start;
 }
 
+function shouldSuppressRecentInteractionMutation(target: Element): boolean {
+  if (Date.now() - lastInteraction.at > RECENT_INTERACTION_SUPPRESSION_MS) {
+    return false;
+  }
+
+  const interacted = nearestMarkableElement(lastInteraction.target);
+
+  if (!interacted) {
+    return false;
+  }
+
+  return interacted === target || interacted.contains(target) || target.contains(interacted);
+}
+
 function processNode(node: Node): void {
   if (!(node instanceof Element)) {
     return;
   }
 
-  if (node.matches("a[href][target='_blank']")) {
-    appendIndicator(node);
+  if (node instanceof HTMLAnchorElement) {
+    if (hasBlankTarget(node)) {
+      appendNewTabIndicator(node);
+    }
+
+    if (isImageLink(node)) {
+      appendImageLinkIndicator(node);
+    }
   }
 
-  if (node instanceof HTMLElement && node.hasAttribute("onclick") && node.getAttribute("onclick")?.includes("window.open")) {
-    appendIndicator(node);
+  if (node instanceof HTMLElement && hasInlineWindowOpen(node)) {
+    appendNewTabIndicator(node);
   }
 
   markBlankTargetLinks(node);
   markInlineWindowOpen(node);
+  markImageLinks(node);
 }
 
 function observeDomChanges(): void {
@@ -78,8 +191,15 @@ function observeDomChanges(): void {
       if (
         mutation.type === "attributes" &&
         mutation.target instanceof Element &&
-        (mutation.attributeName === "target" || mutation.attributeName === "onclick")
+        mutation.attributeName
       ) {
+        if (
+          (mutation.attributeName === "target" || mutation.attributeName === "onclick") &&
+          shouldSuppressRecentInteractionMutation(mutation.target)
+        ) {
+          continue;
+        }
+
         processNode(mutation.target);
       }
     }
@@ -89,7 +209,7 @@ function observeDomChanges(): void {
     childList: true,
     subtree: true,
     attributes: true,
-    attributeFilter: ["target", "onclick"],
+    attributeFilter: ["href", "onclick", "target", "type"],
   });
 }
 
@@ -106,39 +226,11 @@ function setupInteractionTracking(): void {
   document.addEventListener("click", track, true);
 }
 
-function setupWindowOpenHook(): void {
-  const ntiWindow = window as Window & {
-    __ntiOpenHookInstalled?: boolean;
-    __ntiOriginalOpen?: Window["open"];
-  };
-
-  if (ntiWindow.__ntiOpenHookInstalled) {
-    return;
-  }
-
-  ntiWindow.__ntiOpenHookInstalled = true;
-  ntiWindow.__ntiOriginalOpen = window.open;
-
-  window.open = function (...args) {
-    const now = Date.now();
-    const withinRecentClickWindow = now - lastInteraction.at <= 1500;
-
-    if (withinRecentClickWindow) {
-      const candidate = nearestMarkableElement(lastInteraction.target);
-      if (candidate) {
-        appendIndicator(candidate);
-      }
-    }
-
-    return ntiWindow.__ntiOriginalOpen?.apply(window, args) ?? null;
-  };
-}
-
 function bootstrap(): void {
   markBlankTargetLinks(document);
   markInlineWindowOpen(document);
+  markImageLinks(document);
   setupInteractionTracking();
-  setupWindowOpenHook();
   observeDomChanges();
 }
 
