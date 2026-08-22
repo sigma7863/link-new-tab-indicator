@@ -2,7 +2,8 @@
 
 English | [日本語](README.md)
 
-A Chrome extension that visually marks elements that open in a new tab (via target="_blank" or window.open()) with a ↗ icon.
+A Chrome extension that visually marks elements that open in a new tab (via target="_blank" or an inline window.open()) with a ↗ icon.
+Direct links to image files are also marked with an `img` badge.
 
 ## Tech Stack
 
@@ -11,7 +12,17 @@ A Chrome extension that visually marks elements that open in a new tab (via targ
 - Bun
 - Chrome Extension Manifest V3
 
-## Setup
+## Install
+
+1. Open [Releases](https://github.com/sigma7863/link-new-tab-indicator/releases/latest)
+2. Download `link-new-tab-indicator.zip` from the latest release
+3. Extract the ZIP file
+4. Open chrome://extensions in Chrome
+5. Enable Developer mode (top-right)
+6. Click Load unpacked
+7. Select the extracted folder
+
+## Development
 
 ```bash
 bun install
@@ -24,20 +35,13 @@ After building, the following files will be generated in the dist directory:
 - `dist/content.js`
 - `dist/styles.css`
 
-## Load into Chrome
-
-1. Open chrome://extensions
-2. Enable Developer mode (top-right)
-3. Click Load unpacked
-4. Select the dist folder
-
 ## Detection
 
 - Static detection: a[target="_blank"]
 - Static fallback detection: Elements whose onclick attribute contains window.open
-- Dynamic detection: Elements that invoke window.open() immediately after a user click
+- Image link detection: Links whose href extension or type attribute points to an image
 
 ## Notes
 
-- window.open() is detected when it is actually executed.
-- window.open() calls that are not triggered by a user click are not marked.
+- Elements that only reveal target="_blank" or window.open() immediately after a click are not marked afterward, so a ↗ badge does not appear only after the user has already pressed the link.
+- Image links are marked when they can be identified from the URL or `type="image/..."`.

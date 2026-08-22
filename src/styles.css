@@ -1,8 +1,8 @@
-.nti-new-tab-indicator {
+.nti-link-indicator {
   position: relative;
 }
 
-.nti-new-tab-icon {
+.nti-link-icon {
   --nti-bg: rgb(100 116 139 / 0.08);
   --nti-border: rgb(100 116 139 / 0.28);
   --nti-fg: rgb(71 85 105 / 0.88);
@@ -27,14 +27,28 @@
   transition: color 120ms ease, border-color 120ms ease, background-color 120ms ease;
 }
 
-.nti-new-tab-indicator:is(:hover, :focus-visible) .nti-new-tab-icon {
+.nti-image-link-icon {
+  --nti-bg: rgb(20 184 166 / 0.1);
+  --nti-border: rgb(13 148 136 / 0.34);
+  --nti-fg: rgb(15 118 110 / 0.92);
+  --nti-bg-hover: rgb(20 184 166 / 0.18);
+  --nti-border-hover: rgb(13 148 136 / 0.48);
+  --nti-fg-hover: rgb(15 118 110);
+
+  padding-right: 0.22em;
+  padding-left: 0.22em;
+  font-size: 0.64em;
+  text-transform: uppercase;
+}
+
+.nti-link-indicator:is(:hover, :focus-visible) .nti-link-icon {
   background: var(--nti-bg-hover);
   border-color: var(--nti-border-hover);
   color: var(--nti-fg-hover);
 }
 
 @media (prefers-color-scheme: dark) {
-  .nti-new-tab-icon {
+  .nti-link-icon {
     --nti-bg: rgb(148 163 184 / 0.14);
     --nti-border: rgb(148 163 184 / 0.34);
     --nti-fg: rgb(203 213 225 / 0.92);
@@ -42,5 +56,14 @@
     --nti-border-hover: rgb(167 139 250 / 0.5);
     --nti-fg-hover: rgb(221 214 254 / 0.98);
     opacity: 0.92;
+  }
+
+  .nti-image-link-icon {
+    --nti-bg: rgb(45 212 191 / 0.16);
+    --nti-border: rgb(45 212 191 / 0.38);
+    --nti-fg: rgb(153 246 228 / 0.94);
+    --nti-bg-hover: rgb(45 212 191 / 0.24);
+    --nti-border-hover: rgb(94 234 212 / 0.56);
+    --nti-fg-hover: rgb(204 251 241);
   }
 }
