@@ -2,11 +2,13 @@ const INDICATOR_CLASS = "nti-link-indicator";
 const NEW_TAB_INDICATOR_CLASS = "nti-new-tab-indicator";
 const IMAGE_LINK_INDICATOR_CLASS = "nti-image-link-indicator";
 const ICON_CLASS = "nti-link-icon";
-const NEW_TAB_ICON_CLASS = "nti-new-tab-icon";
 const IMAGE_LINK_ICON_CLASS = "nti-image-link-icon";
+const ICON_BADGE_ATTR = "data-nti-badge";
 const NEW_TAB_MARKED_ATTR = "data-nti-new-tab-marked";
 const IMAGE_LINK_MARKED_ATTR = "data-nti-image-link-marked";
 const TITLE_OWNED_ATTR = "data-nti-title-owned";
+const NEW_TAB_TITLE = "新しいタブで開く";
+const IMAGE_LINK_TITLE = "画像ファイルへのリンク";
 const RECENT_INTERACTION_SUPPRESSION_MS = 1200;
 const IMAGE_FILE_EXTENSION_RE =
   /\.(?:apng|avif|bmp|gif|heic|heif|ico|jpe?g|png|svg|tiff?|webp)$/i;
@@ -26,7 +28,7 @@ function appendBadge(
     className: string;
     markedAttr: string;
     text: string;
-    title: string;
+    iconClass?: string;
   }
 ): void {
   if (!isHTMLElement(el)) {
@@ -41,20 +43,47 @@ function appendBadge(
   el.classList.add(INDICATOR_CLASS);
   el.classList.add(options.className);
 
-  if (!el.getAttribute("title") || el.getAttribute(TITLE_OWNED_ATTR) === "1") {
-    const title = el.getAttribute("title");
-    el.setAttribute("title", title ? `${title} / ${options.title}` : options.title);
+  if (!el.getAttribute("title") || ownsTitle(el)) {
     el.setAttribute(TITLE_OWNED_ATTR, "1");
+    syncOwnedTitle(el);
   }
 
   const icon = document.createElement("span");
-  icon.className = `${ICON_CLASS} ${
-    options.markedAttr === NEW_TAB_MARKED_ATTR ? NEW_TAB_ICON_CLASS : IMAGE_LINK_ICON_CLASS
-  }`;
+  icon.className = options.iconClass ? `${ICON_CLASS} ${options.iconClass}` : ICON_CLASS;
+  icon.setAttribute(ICON_BADGE_ATTR, options.markedAttr);
   icon.setAttribute("aria-hidden", "true");
   icon.textContent = options.text;
 
   el.appendChild(icon);
+}
+
+function removeBadge(
+  el: Element,
+  options: {
+    className: string;
+    markedAttr: string;
+  }
+): void {
+  if (!isHTMLElement(el) || el.getAttribute(options.markedAttr) !== "1") {
+    return;
+  }
+
+  el.removeAttribute(options.markedAttr);
+  el.classList.remove(options.className);
+
+  Array.from(el.children)
+    .find(
+      (child) =>
+        child.classList.contains(ICON_CLASS) &&
+        child.getAttribute(ICON_BADGE_ATTR) === options.markedAttr
+    )
+    ?.remove();
+
+  if (!hasAnyBadge(el)) {
+    el.classList.remove(INDICATOR_CLASS);
+  }
+
+  syncOwnedTitle(el);
 }
 
 function appendNewTabIndicator(el: Element): void {
@@ -62,7 +91,6 @@ function appendNewTabIndicator(el: Element): void {
     className: NEW_TAB_INDICATOR_CLASS,
     markedAttr: NEW_TAB_MARKED_ATTR,
     text: "↗",
-    title: "新しいタブで開く",
   });
 }
 
@@ -71,12 +99,61 @@ function appendImageLinkIndicator(el: Element): void {
     className: IMAGE_LINK_INDICATOR_CLASS,
     markedAttr: IMAGE_LINK_MARKED_ATTR,
     text: "img",
-    title: "画像ファイルへのリンク",
+    iconClass: IMAGE_LINK_ICON_CLASS,
   });
 }
 
+function removeNewTabIndicator(el: Element): void {
+  removeBadge(el, {
+    className: NEW_TAB_INDICATOR_CLASS,
+    markedAttr: NEW_TAB_MARKED_ATTR,
+  });
+}
+
+function removeImageLinkIndicator(el: Element): void {
+  removeBadge(el, {
+    className: IMAGE_LINK_INDICATOR_CLASS,
+    markedAttr: IMAGE_LINK_MARKED_ATTR,
+  });
+}
+
+function hasAnyBadge(el: HTMLElement): boolean {
+  return (
+    el.getAttribute(NEW_TAB_MARKED_ATTR) === "1" ||
+    el.getAttribute(IMAGE_LINK_MARKED_ATTR) === "1"
+  );
+}
+
+function ownsTitle(el: HTMLElement): boolean {
+  return el.getAttribute(TITLE_OWNED_ATTR) === "1";
+}
+
+function syncOwnedTitle(el: HTMLElement): void {
+  if (!ownsTitle(el)) {
+    return;
+  }
+
+  const titles: string[] = [];
+
+  if (el.getAttribute(NEW_TAB_MARKED_ATTR) === "1") {
+    titles.push(NEW_TAB_TITLE);
+  }
+
+  if (el.getAttribute(IMAGE_LINK_MARKED_ATTR) === "1") {
+    titles.push(IMAGE_LINK_TITLE);
+  }
+
+  if (titles.length === 0) {
+    el.removeAttribute("title");
+    el.removeAttribute(TITLE_OWNED_ATTR);
+    return;
+  }
+
+  el.setAttribute("title", titles.join(" / "));
+}
+
 function hasBlankTarget(link: HTMLAnchorElement): boolean {
-  return link.target.toLowerCase() === "_blank";
+  return link.hasAttribute("href") && link.target.toLowerCase() === "_blank";
 }
 
 function hasInlineWindowOpen(node: HTMLElement): boolean {
@@ -107,7 +184,37 @@ function hasImageHref(link: HTMLAnchorElement): boolean {
 }
 
 function isImageLink(link: HTMLAnchorElement): boolean {
+  if (!link.hasAttribute("href")) {
+    return false;
+  }
+
   return hasImageMimeType(link) || hasImageHref(link);
+}
+
+function isNewTabElement(el: Element): boolean {
+  if (el instanceof HTMLAnchorElement && hasBlankTarget(el)) {
+    return true;
+  }
+
+  return el instanceof HTMLElement && hasInlineWindowOpen(el);
+}
+
+function syncNewTabIndicator(el: Element): void {
+  if (isNewTabElement(el)) {
+    appendNewTabIndicator(el);
+    return;
+  }
+
+  removeNewTabIndicator(el);
+}
+
+function syncImageLinkIndicator(link: HTMLAnchorElement): void {
+  if (isImageLink(link)) {
+    appendImageLinkIndicator(link);
+    return;
+  }
+
+  removeImageLinkIndicator(link);
 }
 
 function markBlankTargetLinks(root: ParentNode): void {
@@ -129,7 +236,7 @@ function markInlineWindowOpen(root: ParentNode): void {
 }
 
 function markImageLinks(root: ParentNode): void {
-  const links = root.querySelectorAll<HTMLAnchorElement>("a[href], a[type]");
+  const links = root.querySelectorAll<HTMLAnchorElement>("a[href]");
   links.forEach((link) => {
     if (isImageLink(link)) {
       appendImageLinkIndicator(link);
@@ -164,18 +271,10 @@ function processNode(node: Node): void {
     return;
   }
 
+  syncNewTabIndicator(node);
+
   if (node instanceof HTMLAnchorElement) {
-    if (hasBlankTarget(node)) {
-      appendNewTabIndicator(node);
-    }
-
-    if (isImageLink(node)) {
-      appendImageLinkIndicator(node);
-    }
-  }
-
-  if (node instanceof HTMLElement && hasInlineWindowOpen(node)) {
-    appendNewTabIndicator(node);
+    syncImageLinkIndicator(node);
   }
 
   markBlankTargetLinks(node);
